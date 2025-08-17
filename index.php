@@ -1,14 +1,34 @@
-#! /bin/php
 <?php
 
+use PhpOffice\PhpSpreadsheet\Calculation\TextData\Format;
 use PhpOffice\PhpSpreadsheet\Reader\Xlsx;
 use PhpOffice\PhpWord\TemplateProcessor;
 
 require __DIR__ . "/vendor/autoload.php";
 
+$options = getopt('f:iah', ['file:', 'micros', 'macros', 'help']);
+
+if (isset($options['h']) || isset($options['help'])) {
+
+    printf("
+    -f or --file => results excel file
+    -i or --micros => micros results
+    -a or --macros => macros results
+    -h or --help => help\n");
+    exit;
+}
+
 $reader = new Xlsx;
-$spreadsheet = $reader->load(__DIR__ . "/14 JULY 2025 MACROS.xlsx");
+if (!isset($options['f']) && !isset($options['file'])) {
+    print("Excel input file name is required. -f/--file \n");
+    exit;
+}
+
+$spreadsheet = isset($options['f']) ?
+    $reader->load(__DIR__ . "/" . $options['f']) :
+    $reader->load(__DIR__ . "/" . $options['file']);
 $activesheet = $spreadsheet->getActiveSheet();
+
 
 $results = [];
 
@@ -41,10 +61,10 @@ foreach ($activesheet->getRowIterator(2) as $row) {
         $sampleID = str_replace('d', '/d', strtolower($sampleID));
     }
     $$sampleID = [
-        'Calcium' => $activesheet->getCell('G' . $row->getRowIndex())->getValue(),
-        'Potassium' => $activesheet->getCell('J' . $row->getRowIndex())->getValue(),
-        'Magnesium' => $activesheet->getCell('N' . $row->getRowIndex())->getValue(),
-        'Sodium' => $activesheet->getCell('P' . $row->getRowIndex())->getValue(),
+        'Calcium' => $activesheet->getCell('H' . $row->getRowIndex())->getValue(),
+        'Potassium' => $activesheet->getCell('K' . $row->getRowIndex())->getValue(),
+        'Magnesium' => $activesheet->getCell('O' . $row->getRowIndex())->getValue(),
+        'Sodium' => $activesheet->getCell('Q' . $row->getRowIndex())->getValue(),
     ];
 
     $batches[$batch][$sampleID] = $$sampleID;
@@ -141,13 +161,21 @@ foreach ($batches as $batchID => $batch) {
         }
 
         if ($key == $samples_in_batch) {
+            $today_worksheets = date('d_m_Y');
+
             if (!is_dir(__DIR__ . "/worksheets")) {
                 mkdir(__DIR__ . "/worksheets");
             }
+
+            if (!is_dir(__DIR__ . "/worksheets/$today_worksheets")) {
+
+                mkdir(__DIR__ . "/worksheets/$today_worksheets");
+            }
+
             foreach ($template->getVariables() as $var) {
                 $template->setValue($var, "");
             }
-            $template->saveAs(__DIR__ . "/worksheets/$batchID.docx");
+            $template->saveAs(__DIR__ . "/worksheets/$today_worksheets/$batchID.docx");
             break;
         }
         $key++;
